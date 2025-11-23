@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import qrcode
+from PIL import Image
+import io
 from visualization import plot_r2_explanation, METRIC_CONFIG
 from fermat_connection import add_fermat_section
 from utils import safe_style_format
@@ -116,6 +119,8 @@ def setup_sidebar():
     if len(selected_derivatives) == 0:
         st.error("Please select at least one derivative.")
         st.stop()
+
+    display_qr_code("https://journal-review.streamlit.app/")
         
     return {
         'start_date': start_date, 'end_date': end_date,
@@ -227,3 +232,28 @@ def display_downloads(combined_df, derivative_data, start_date, end_date, best_m
     with col2:
         summary = f"Analysis {start_date} to {end_date}\nR²: {best_r2:.4f}"
         st.download_button("Download Summary (TXT)", data=summary, file_name="summary.txt", mime="text/plain")
+
+def display_qr_code(url="https://deine-app-url.streamlit.app"):
+    """
+    Generiert einen QR-Code für die App und zeigt ihn in der Sidebar an.
+    """
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📱 Live auf deinem Handy")
+        
+    # QR Code generieren
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=2,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+        
+    img = qr.make_image(fill_color="black", back_color="white")
+        
+    # In Streamlit anzeigen
+    # Wir konvertieren das PIL Image in Bytes für Streamlit
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    st.sidebar.image(img_byte_arr, caption="Scannen für interaktive Charts", use_container_width=True)
