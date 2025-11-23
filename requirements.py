@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+yfinance
+matplotlib
+seaborn
+plotly
+scipy
+qrcode
+pillow
