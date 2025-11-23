@@ -24,8 +24,41 @@ from ui_components import (setup_sidebar, display_header, display_methodology_se
                           display_detailed_model_equations, display_correlation_interpretation,
                           display_downloads, render_tab_footer)
 
-st.set_page_config(page_title="Gold Derivatives Analysis", page_icon=None, layout="wide", initial_sidebar_state="expanded")
+# Page Configuration
+st.set_page_config(page_title="Gold Derivatives Analysis", page_icon="none", layout="wide", initial_sidebar_state="expanded")
 
+# --- PASSWORD PROTECTION ---
+def check_password():
+    """Returns `True` if the user had the correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password"] == st.secrets["password"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store password
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if st.session_state["password_correct"]:
+        return True
+
+    st.title("Protected Area")
+    st.text_input(
+        "Please enter password:", 
+        type="password", 
+        on_change=password_entered, 
+        key="password"
+    )
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("Password incorrect")
+
+    return False
+
+# --- MAIN APPLICATION ---
 def main():
     # HTML Anchor for "Back to top"
     st.markdown('<div id="top"></div>', unsafe_allow_html=True)
@@ -102,7 +135,6 @@ def main():
         
         with col2:
             with st.expander("Show Loaded Instruments Details", expanded=False):
-                # CLEAN NAMES IN DATA TABLE
                 data_summary = [{'Derivative': name.replace('_', ' '), 'Records': len(data)} for name, data in derivative_data.items()]
                 st.dataframe(pd.DataFrame(data_summary), use_container_width=True, hide_index=True)
         
@@ -158,4 +190,8 @@ def main():
         render_tab_footer()
 
 if __name__ == "__main__":
+    # Check password before running the main app
+    if not check_password():
+        st.stop()
+    
     main()
