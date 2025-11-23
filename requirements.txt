@@ -6,5 +6,7 @@ matplotlib
 seaborn
 plotly
 scipy
+statsmodels
 qrcode
 pillow
+fpdf
