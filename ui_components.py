@@ -40,6 +40,8 @@ def setup_sidebar():
     st.sidebar.markdown("---")
     
     st.sidebar.header("Configuration")
+
+    display_qr_code("https://journal-review.streamlit.app/")
     
     # 1. Time Period
     st.sidebar.subheader("Time Period")
@@ -120,7 +122,7 @@ def setup_sidebar():
         st.error("Please select at least one derivative.")
         st.stop()
 
-    display_qr_code("https://journal-review.streamlit.app/")
+    
         
     return {
         'start_date': start_date, 'end_date': end_date,
@@ -238,7 +240,7 @@ def display_qr_code(url="https://deine-app-url.streamlit.app"):
     Generiert einen QR-Code für die App und zeigt ihn in der Sidebar an.
     """
     st.sidebar.markdown("---")
-    st.sidebar.subheader("📱 Live auf deinem Handy")
+    st.sidebar.subheader("Scann me")
         
     # QR Code generieren
     qr = qrcode.QRCode(
@@ -256,4 +258,4 @@ def display_qr_code(url="https://deine-app-url.streamlit.app"):
     # Wir konvertieren das PIL Image in Bytes für Streamlit
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
-    st.sidebar.image(img_byte_arr, caption="Scannen für interaktive Charts", use_container_width=True)
+    st.sidebar.image(img_byte_arr, caption="Scan for interactive Charts", use_container_width=True)
