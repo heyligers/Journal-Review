@@ -3,6 +3,8 @@ import numpy as np
 import yfinance as yf
 import streamlit as st
 import warnings
+# UPDATE: Import der neuen Black-76 Simulationsfunktion
+from financial_models import simulate_rolling_option, simulate_barrier_option, simulate_futures_option
 
 # Suppress FutureWarnings from yfinance
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -13,64 +15,12 @@ def flatten_yfinance_columns(df):
         df.columns = df.columns.get_level_values(0)
     return df
 
-# --- SIMULATION LOGIC ---
-
-def simulate_gold_options_data(base_data, volatility_multiplier=1.5):
-    """Simulates Gold Options data (Call Option, ATM)."""
-    data = base_data.copy()
-    if 'Returns' in data.columns:
-        data['Returns'] = data['Returns'] * volatility_multiplier
-    
-    if 'Close' in data.columns:
-        option_percentage = 0.08
-        noise = np.random.normal(0, 0.1, len(data))
-        data['Close'] = data['Close'] * option_percentage * (1 + noise)
-    return data
-
-def simulate_vanilla_swap_data(base_data):
-    """
-    Simulates a Standard Swap (Plain Vanilla).
-    Characteristics: High leverage, linear response.
-    """
-    data = base_data.copy()
-    leverage = 2.5
-    noise_level = 0.005
-    
-    if 'Returns' in data.columns:
-        noise = np.random.normal(0, noise_level, len(data))
-        data['Returns'] = data['Returns'] * leverage + noise
-        data['Close'] = base_data['Close'] * (1 + data['Returns'].cumsum())
-        
-    return data
-
-def simulate_customized_swap_data(base_data):
-    """
-    Simulates an Exotic Swap (Customized/Structured).
-    Characteristics: Non-linear, Tail-Risks ("Jumps").
-    """
-    data = base_data.copy()
-    leverage = 3.0
-    
-    if 'Returns' in data.columns:
-        basic_returns = data['Returns'] * leverage
-        
-        # Jump Diffusion (1% probability of event)
-        jump_prob = 0.01 
-        jump_size = np.random.normal(-0.05, 0.10, len(data)) 
-        jumps = np.random.choice([0, 1], size=len(data), p=[1-jump_prob, jump_prob])
-        
-        data['Returns'] = basic_returns + (jumps * jump_size)
-        data['Close'] = base_data['Close'] * (1 + data['Returns'].cumsum())
-        
-    return data
-
 # --- LOADING LOGIC ---
 
 @st.cache_data
 def load_multiple_gold_derivatives(start_date, end_date, selected_derivatives):
     """
-    Loads data for selected derivatives and runs simulations.
-    UPDATED: Removed individual st.success messages for a cleaner UI.
+    Lädt Daten für reale Derivate (inkl. GLDI) und simuliert BSM/Barrier/Black-76 Optionen.
     """
     # Map internal names to Yahoo Tickers
     all_derivatives = {
@@ -82,22 +32,34 @@ def load_multiple_gold_derivatives(start_date, end_date, selected_derivatives):
         'Gold_Futures_ETF_DGL': 'DGL',
         'Inverse_Gold_ETF_GLL': 'GLL',
         'Gold_Leveraged_ETF_2x': 'UGL',
+        # REALES PRODUKT: Credit Suisse Gold Shares Covered Call ETN
+        'Gold_Covered_Call_GLDI': 'GLDI' 
     }
     
+    # Filter only selected real derivatives
     real_derivatives = {k: v for k, v in all_derivatives.items() if k in selected_derivatives}
     
     derivative_data = {}
     base_gold_data = None
     gold_spot_data = None
+    risk_free_data = None
     
-    # 1. Load Real Data
+    # 1. Zinsdaten laden (^IRX = 13 Week Treasury Bill)
+    try:
+        irx = yf.download("^IRX", start=start_date, end=end_date, progress=False, auto_adjust=False)
+        risk_free_data = flatten_yfinance_columns(irx)
+    except:
+        st.warning("Could not fetch Risk Free Rate (^IRX). Using constant fallback.")
+
+    # 2. Reale Daten laden
     for name, ticker in real_derivatives.items():
         try:
+            # Wir laden auch 'Low' für Barrier Checks
             data = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
             data = flatten_yfinance_columns(data)
             
             if not data.empty and len(data) > 10 and 'Close' in data.columns:
-                if data['Close'].notna().sum() > 0 and (data['Close'] > 0).sum() > 0:
+                if data['Close'].notna().sum() > 0:
                     data['Returns'] = np.log(data['Close'] / data['Close'].shift(1))
                     derivative_data[name] = data.dropna()
                     
@@ -105,17 +67,16 @@ def load_multiple_gold_derivatives(start_date, end_date, selected_derivatives):
                         gold_spot_data = data.copy()
                     if name == 'Gold_Futures':
                         base_gold_data = data.copy()
-                    
-                    # CLEANUP: No st.success here anymore to avoid clutter
                 else:
-                    st.warning(f"⚠️ {name}: Invalid data (Null/NaN values)")
+                    st.warning(f"{name}: Invalid data (Null/NaN values)")
             else:
-                st.warning(f"⚠️ {name}: No data found for timeframe")
+                st.warning(f"{name}: No data found for {name}")
         except Exception as e:
-            st.error(f"❌ Error loading {name}: {str(e)}")
+            st.error(f"Error loading {name}: {str(e)}")
             
-    # Fallback for simulations if Futures were not selected but needed
-    simulated_keys = ['Gold_Options', 'Gold_Swap_Vanilla', 'Gold_Swap_Customized']
+    # Fallback für Simulationen (brauchen Basisdaten GC=F)
+    # UPDATE: 'Gold_Futures_Option' zur Liste hinzugefügt
+    simulated_keys = ['Gold_Options', 'Gold_Barrier_Option', 'Gold_Futures_Option']
     needs_simulation = any(k in selected_derivatives for k in simulated_keys)
     
     if needs_simulation and (base_gold_data is None or base_gold_data.empty):
@@ -125,26 +86,34 @@ def load_multiple_gold_derivatives(start_date, end_date, selected_derivatives):
             base_gold_data['Returns'] = np.log(base_gold_data['Close'] / base_gold_data['Close'].shift(1))
             base_gold_data = base_gold_data.dropna()
         except:
-            st.error("❌ Could not load base data (Gold Futures) required for simulations.")
+            st.error("Could not load base data (Gold Futures) required for simulations.")
 
-    # 2. Run Simulations
+    # 3. Simulationen durchführen (Wissenschaftliche Modelle)
     if base_gold_data is not None and not base_gold_data.empty:
+        
+        # A) Black-Scholes Vanilla Options (Spot Options)
         if 'Gold_Options' in selected_derivatives:
             try:
-                derivative_data['Gold_Options'] = simulate_gold_options_data(base_gold_data)
+                derivative_data['Gold_Options'] = simulate_rolling_option(base_gold_data, T_days=30, strike_pct=1.0)
             except Exception as e:
-                st.warning(f"⚠️ Simulation Error (Options): {e}")
-                
-        if 'Gold_Swap_Vanilla' in selected_derivatives:
+                st.warning(f"Simulation Error (BSM Options): {e}")
+
+        # B) Options on Futures (Black-76) - NEU
+        if 'Gold_Futures_Option' in selected_derivatives:
             try:
-                derivative_data['Gold_Swap_Vanilla'] = simulate_vanilla_swap_data(base_gold_data)
+                derivative_data['Gold_Futures_Option'] = simulate_futures_option(
+                    base_gold_data, T_days=30, strike_pct=1.0
+                )
             except Exception as e:
-                st.warning(f"⚠️ Simulation Error (Vanilla Swap): {e}")
+                st.warning(f"Simulation Error (Black-76 Options): {e}")
                 
-        if 'Gold_Swap_Customized' in selected_derivatives:
+        # C) Barrier Options (Down-and-Out)
+        if 'Gold_Barrier_Option' in selected_derivatives:
             try:
-                derivative_data['Gold_Swap_Customized'] = simulate_customized_swap_data(base_gold_data)
+                derivative_data['Gold_Barrier_Option'] = simulate_barrier_option(
+                    base_gold_data, barrier_pct=0.95, T_days=30
+                )
             except Exception as e:
-                st.warning(f"⚠️ Simulation Error (Custom Swap): {e}")
+                st.warning(f"Simulation Error (Barrier Option): {e}")
 
     return derivative_data, gold_spot_data
