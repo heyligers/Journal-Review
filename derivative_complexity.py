@@ -4,7 +4,7 @@ import numpy as np
 class DerivativeComplexityClassifier:
     """
     Klassifiziert Gold-Derivate basierend auf quantitativen Komplexitätsmetriken.
-    Update: Ermöglicht dynamische Gewichtungsanpassung ("What-If").
+    Update: Swaps ersetzt durch GLDI (Real ETN) und Barrier Options (Pfadabhängig).
     """
     
     def __init__(self):
@@ -47,18 +47,29 @@ class DerivativeComplexityClassifier:
                 'liquidity_score': 3, 'counterparty_risk': 3,
             },
 
-            # --- 4. OPTIONEN & SWAPS (SIMULIERT) ---
+            # --- 4. EXOTICS & REAL COMPLEX PRODUCTS ---
             'Gold_Options': {
+                # Standard Vanilla Option (Gamma Risk)
                 'structure_layers': 2, 'leverage_factor': 15, 'pricing_complexity': 4,
                 'liquidity_score': 4, 'counterparty_risk': 1,
             },
-            'Gold_Swap_Vanilla': {
-                'structure_layers': 3, 'leverage_factor': 20, 'pricing_complexity': 3,
-                'liquidity_score': 3, 'counterparty_risk': 4,
+            'Gold_Covered_Call_GLDI': {
+                # Credit Suisse ETN (Note = Schuldverschreibung)
+                # Komplexität: Covered Call Strategie + Emittentenrisiko
+                'structure_layers': 4, 'leverage_factor': 1, 'pricing_complexity': 4,
+                'liquidity_score': 3, 'counterparty_risk': 5, # High (Bankrott-Risiko)
             },
-            'Gold_Swap_Customized': {
-                'structure_layers': 5, 'leverage_factor': 25, 'pricing_complexity': 5,
-                'liquidity_score': 1, 'counterparty_risk': 5,
+            'Gold_Barrier_Option': {
+                # Down-and-Out Call (Simuliert)
+                # Komplexität: Pfadabhängigkeit (Diskontinuität) + BSM Pricing
+                'structure_layers': 5, 'leverage_factor': 20, 'pricing_complexity': 6, # Highest
+                'liquidity_score': 1, 'counterparty_risk': 2,
+            },
+            'Gold_Futures_Option': {
+                # Option auf Futures (Black-76)
+                # Komplexität: Derivat auf Derivat (Option -> Future -> Spot)
+                'structure_layers': 3, 'leverage_factor': 15, 'pricing_complexity': 5,        
+                'liquidity_score': 3, 'counterparty_risk': 1,         
             },
         }
         
@@ -72,17 +83,11 @@ class DerivativeComplexityClassifier:
         }
     
     def update_weights(self, new_weights):
-        """
-        Aktualisiert die Gewichtungen basierend auf Nutzereingaben (What-If Szenario).
-        Args:
-            new_weights (dict): Dictionary mit neuen Gewichtungswerten.
-        """
         for key, value in new_weights.items():
             if key in self.weights:
                 self.weights[key] = value
 
     def calculate_complexity_score(self, derivative_name):
-        """Berechnet einen gewichteten Komplexitätsscore."""
         if derivative_name not in self.complexity_scores:
             return None
         
@@ -94,7 +99,6 @@ class DerivativeComplexityClassifier:
         return np.clip(score, 0, 10)
     
     def get_all_complexity_scores(self):
-        """Gibt alle Komplexitätsscores als DataFrame zurück."""
         scores = {}
         for derivative in self.complexity_scores.keys():
             scores[derivative] = {
@@ -107,9 +111,7 @@ class DerivativeComplexityClassifier:
         return df
     
     def assign_complexity_to_timeseries(self, derivative_data_dict):
-        """Weist jedem Datenpunkt seinen Komplexitätsscore zu."""
         combined_data = []
-        
         for derivative_name, data_df in derivative_data_dict.items():
             complexity = self.calculate_complexity_score(derivative_name)
             if complexity is not None and not data_df.empty:
@@ -120,7 +122,6 @@ class DerivativeComplexityClassifier:
                 combined_data.append(temp_df)
         
         if combined_data:
-            result = pd.concat(combined_data, ignore_index=True)
-            return result
+            return pd.concat(combined_data, ignore_index=True)
         else:
             return pd.DataFrame()
