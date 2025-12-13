@@ -4,7 +4,7 @@ from scipy.stats import pearsonr, spearmanr, kendalltau
 
 def compute_correlations(x, y, methods):
     """
-    Führt statische Korrelationsanalysen durch.
+    Performs statistical correlation analyses.
     """
     results = {}
     mask = ~(np.isnan(x) | np.isnan(y) | np.isinf(x) | np.isinf(y))
@@ -13,7 +13,8 @@ def compute_correlations(x, y, methods):
     
     if len(x_clean) < 3:
         for m in methods:
-            results[m] = {'error': 'Zu wenige Daten'}
+            # TRANSLATED ERROR
+            results[m] = {'error': 'Insufficient data'}
         return results
     
     for m in methods:
@@ -32,20 +33,16 @@ def compute_correlations(x, y, methods):
 
 def calculate_dynamic_correlation(combined_df):
     """
-    Berechnet die Zeitreihe der Korrelation zwischen Komplexität und Volatilität.
-    Zeigt, ob die Hypothese in bestimmten Marktphasen stärker gilt.
+    Calculates the time series of the correlation between complexity and volatility.
     """
-    # Wir brauchen pro Tag mindestens 3 Derivate für eine sinnvolle Korrelation
+    # We need at least 3 derivatives per day for a meaningful correlation
     daily_corrs = []
     
-    # Gruppieren nach Datum
-    # combined_df hat Spalten: Date, Derivative, Complexity, Volatility
+    # Group by date
     for date, group in combined_df.groupby('Date'):
-        # Filterung ungültiger Werte
         valid_data = group.dropna(subset=['Complexity', 'Volatility'])
         
-        if len(valid_data) >= 4: # Mindestens 4 Punkte für stabile Korrelation
-            # Pearson Korrelation für diesen Tag berechnen
+        if len(valid_data) >= 4: # At least 4 points for stable correlation
             try:
                 corr = valid_data['Complexity'].corr(valid_data['Volatility'])
                 if not np.isnan(corr):
@@ -59,5 +56,5 @@ def calculate_dynamic_correlation(combined_df):
     return pd.DataFrame(daily_corrs).sort_values('Date').set_index('Date')
 
 def rolling_correlation(df, window, method='pearson'):
-    """(Legacy Helper - wird hier nicht primär genutzt, bleibt für Kompatibilität)"""
+    """(Legacy Helper - not primarily used here, kept for compatibility)"""
     return pd.Series(dtype=float)
