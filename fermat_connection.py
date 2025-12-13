@@ -12,12 +12,12 @@ def create_fermat_animation():
     """
     st.title("From Fermat's Last Theorem to Derivative Volatility")
 
-    st.markdown("""
+    st.markdown(r"""
     This section demonstrates the conceptual link between the mathematical elegance 
     of Fermat's Last Theorem and our hypothesis on volatility scaling.
 
     **Core Analogy:** Fermat's theorem deals with power functions ($a^n$). Our hypothesis 
-    states that volatility grows as a power function of complexity: $\sigma(C) = a \cdot C^\\alpha$
+    states that volatility grows as a power function of complexity: $\sigma(C) = a \cdot C^\alpha$
     """)
 
     # Tabs for different sections
@@ -90,12 +90,12 @@ def show_historical_context():
         margin=dict(t=50, b=50)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("""
+        st.markdown(r"""
         ### Historical Significance
         
         Pierre de Fermat postulated in 1637 that the equation $a^n + b^n = c^n$ 
@@ -127,7 +127,7 @@ def show_mathematical_analogy():
         st.markdown("### Fermat's Last Theorem")
         st.latex(r''' a^n + b^n = c^n ''')
 
-        st.markdown("""
+        st.markdown(r"""
         **Properties:**
         - **Power Function** $a^n$
         - Non-linear for $n > 2$
@@ -152,13 +152,13 @@ def show_mathematical_analogy():
             height=350, margin=dict(l=20, r=20, t=40, b=20),
             template="plotly_white"
         )
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(fig1, width="stretch")
 
     with col2:
         st.markdown("### Derivative Volatility Hypothesis")
         st.latex(r''' \sigma(C) = a \cdot C^{\alpha} ''')
 
-        st.markdown("""
+        st.markdown(r"""
         **Properties:**
         - **Power Function** of Complexity
         - Non-linear
@@ -184,9 +184,9 @@ def show_mathematical_analogy():
             height=350, margin=dict(l=20, r=20, t=40, b=20),
             template="plotly_white"
         )
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width="stretch")
 
-    st.success("""
+    st.success(r"""
     ### The Central Analogy
     Both functions are **Power Functions** ($x^n$). We are testing whether financial markets 
     follow the same mathematical logic as Fermat's number theory.
@@ -195,7 +195,7 @@ def show_mathematical_analogy():
 
 def show_connection_explanation():
     """
-    Explains the conceptual link.
+    Explains the conceptual link with clean, centered LaTeX formulas.
     """
     st.header("The Connection: From Number Theory to Finance")
 
@@ -231,14 +231,54 @@ def show_connection_explanation():
         Complexity drives risk according to the Power Model.
         """)
 
-    # Transformation Visualisierung
+    # Transformation Visualisierung (UPDATED)
     st.markdown("---")
     st.subheader("The Mathematical Journey")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Inspiration", "a^n", "Fermat")
-    c2.write("## -> Transfer ->")
-    c3.metric("Application", "C^alpha", "Financial Market")
+    # Spalten für die zentrierte Darstellung
+    c1, c2, c3 = st.columns([1, 0.5, 1])
+    
+    with c1:
+        # Manuelles HTML/Markdown für den "Metric-Look" aber mit echtem LaTeX
+        st.markdown("""
+        <div style="text-align: center;">
+            <span style="font-size: 14px; color: #555;">Inspiration (Origin)</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Große LaTeX Formel
+        st.latex(r"\huge a^n")
+        
+        st.markdown("""
+        <div style="text-align: center; margin-top: -10px;">
+            <span style="background-color: #d4edda; color: #155724; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Number Theory</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c2:
+        # Vertikal zentrierter Pfeil
+        st.markdown("""
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding-top: 15px;">
+            <div style="font-size: 40px; color: #888;">➝</div>
+            <div style="font-size: 12px; color: #aaa; margin-top: -5px;">Transfer</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with c3:
+        st.markdown("""
+        <div style="text-align: center;">
+            <span style="font-size: 14px; color: #555;">Application (Target)</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Große LaTeX Formel
+        st.latex(r"\huge C^\alpha")
+        
+        st.markdown("""
+        <div style="text-align: center; margin-top: -10px;">
+             <span style="background-color: #d4edda; color: #155724; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Financial Market</span>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def add_fermat_section():
